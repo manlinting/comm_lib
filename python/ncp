@@ -1,0 +1,58 @@
+#!/bin/bash
+#########################################################################
+# Author: lincolnlin
+# Created Tim: Sun 02 Sep 2012 12:34:03 AM CST
+# File Name: tes
+# Description: 
+#########################################################################
+
+. "func-common.sh"
+
+FILE_PATH=
+DEST_HOST=
+DEST_IP=
+NC_PORT=
+
+#为全局变量赋值============================================================
+if [ $# -eq "0" ]  # 不带命令行参数就调用脚本?
+then
+  die "Usage: `basename $0` options
+  -f file_path  only one
+  -i dest ip  or  -h dest host
+  -p port default 4321"
+fi  
+
+
+while getopts ":af:i:h:" Option
+do
+  case $Option in
+    a ) echo "Scenario #5: option -$Option-";;
+    f     ) FILE_PATH=$OPTARG;;
+    h     ) DEST_HOST=$OPTARG;;
+    i     ) DEST_IP=$OPTARG;;
+    p     ) NC_PORT=$OPTARG;;
+    *     ) warn "Unimplemented option chosen.";;   # DEFAULT
+  esac
+done
+
+
+if [[ -n "$DEST_HOST" ]]; then
+	DEST_IP=$(qlst $DEST_HOST)
+fi
+if [[ ! -n "$NC_PORT" ]]; then
+	NC_PORT=4321
+fi
+
+logmsg "======================================================================="
+logmsg "start to transfer $FILE_PATH to $DEST_HOST  ip $DEST_IP"
+
+
+logmsg "execute the command in the dest machine"
+logmsg "netcat -l -p $NC_PORT | lz4 -d | tar x"
+wait
+
+logmsg "execute the command in the local machine"
+echo "tar -cf - $FILE_PATH| pv -s `du -sb $FILE_PATH| awk '{s += $1} END {print s}'`  | lz4 -B4 |netcat $DEST_IP $NC_PORT" | tee /dev/tty | sh
+
+logmsg "=============================transfer finish==========================="
+logmsg "======================================================================="
